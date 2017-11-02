@@ -1,0 +1,12 @@
+
+*.class
+*.properties
+target/classes/config.properties
+target/classes/timux/AccesMySQL.class
+target/classes/timux/AudioPlayer$1.class
+target/classes/timux/AudioPlayer.class
+target/classes/timux/Bot$1.class
+target/classes/timux/Bot.class
+target/classes/timux/BotListener.class
+target/classes/timux/MemeGenerator.class
+target/classes/timux/TrackScheduler.class
