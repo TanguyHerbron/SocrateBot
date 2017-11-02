@@ -18,6 +18,7 @@ public class TrackScheduler extends AudioEventAdapter{
 		this.player = player;
 		this.queue = new LinkedBlockingQueue<>();
 	}
+
 	
 	public void queue(AudioTrack track)
 	{
@@ -45,6 +46,11 @@ public class TrackScheduler extends AudioEventAdapter{
 	public void setVolume(int vol)
 	{
 		player.setVolume(vol);
+	}
+	
+	public int getVolume()
+	{
+		return player.getVolume(); 
 	}
 	
 	public boolean isPaused()

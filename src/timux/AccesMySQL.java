@@ -370,7 +370,6 @@ public class AccesMySQL {
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		} finally {
-			
 			if(cn != null)
 			{
 				try {
@@ -417,6 +416,44 @@ public class AccesMySQL {
 				
 				str = str.substring(rand2, rand2+rand1);
 			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} finally {
+			
+			if(cn != null)
+			{
+				try {
+					cn.close();
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+		return str;
+	}
+	
+	public String getJailChannel(String guildId)
+	{
+		Statement st = null;
+		String str = null;
+		
+		try {
+			Class.forName("com.mysql.jdbc.Driver");
+			cn = (Connection) DriverManager.getConnection(address, login, password);
+			
+			st = (Statement) cn.createStatement();
+			String sql = "SELECT channelId FROM Socrate.jailChannels WHERE guildId='" + guildId + "'";
+			
+			ResultSet result = (ResultSet) st.executeQuery(sql);
+			
+			if(result.first())
+			{
+				str = result.getString("channelId");
+			}
+			
 		} catch (SQLException e) {
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {

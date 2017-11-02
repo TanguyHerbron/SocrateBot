@@ -144,6 +144,110 @@ public class MemeGenerator {
 		}
 		return url;
 	}
+	
+	public String heavyBreathing(String memeTemplate, String message)
+	{
+		HttpClient httpClient = HttpClients.createDefault();
+		HttpPost httpPost = new HttpPost("https://api.imgflip.com/caption_image");
+		String url = null;
+
+		List<NameValuePair> params = new ArrayList<NameValuePair>(5);
+		params.add(new BasicNameValuePair("template_id", memeTemplate));
+		params.add(new BasicNameValuePair("username", username));
+		params.add(new BasicNameValuePair("password", password));
+		params.add(new BasicNameValuePair("boxes[0][text]", message));
+		try {
+			httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+
+		HttpResponse response = null;
+		try {
+			response = httpClient.execute(httpPost);
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		HttpEntity entity = response.getEntity();
+
+		if(entity != null)
+		{
+			InputStream instream;
+			try {
+				instream = entity.getContent();
+				url = getStringFromInputStream(instream);
+				url = url.substring(url.indexOf("url"));
+				url = url.substring(url.indexOf(":"));
+				url = url.substring(url.indexOf("\"")+1, url.lastIndexOf(",")-1);
+				url = url.replaceAll("\\\\", "");
+			} catch (UnsupportedOperationException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}  
+		}
+		return url;
+	}
+	
+	public String aliens(String memeTemplate, String message)
+	{
+		HttpClient httpClient = HttpClients.createDefault();
+		HttpPost httpPost = new HttpPost("https://api.imgflip.com/caption_image");
+		String url = null;
+
+		List<NameValuePair> params = new ArrayList<NameValuePair>(5);
+		params.add(new BasicNameValuePair("template_id", memeTemplate));
+		params.add(new BasicNameValuePair("username", username));
+		params.add(new BasicNameValuePair("password", password));
+		params.add(new BasicNameValuePair("boxes[0][text]", message));
+		params.add(new BasicNameValuePair("boxes[0][x]", "10"));
+		params.add(new BasicNameValuePair("boxes[0][y]", "325"));
+		params.add(new BasicNameValuePair("boxes[0][width]", "437"));
+		params.add(new BasicNameValuePair("boxes[0][height]", "100"));
+		try {
+			httpPost.setEntity(new UrlEncodedFormEntity(params, "UTF-8"));
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+
+		HttpResponse response = null;
+		try {
+			response = httpClient.execute(httpPost);
+		} catch (ClientProtocolException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		HttpEntity entity = response.getEntity();
+
+		if(entity != null)
+		{
+			InputStream instream;
+			try {
+				instream = entity.getContent();
+				url = getStringFromInputStream(instream);
+				url = url.substring(url.indexOf("url"));
+				url = url.substring(url.indexOf(":"));
+				url = url.substring(url.indexOf("\"")+1, url.lastIndexOf(",")-1);
+				url = url.replaceAll("\\\\", "");
+			} catch (UnsupportedOperationException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}  
+		}
+		return url;
+	}
 
 	private static String getStringFromInputStream(InputStream is) {
 

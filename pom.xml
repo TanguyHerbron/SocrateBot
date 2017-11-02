@@ -39,5 +39,10 @@
   		<artifactId>slf4j-nop</artifactId>
   		<version>1.7.25</version>
   	</dependency>
+  	<dependency>
+  		<groupId>ai.api</groupId>
+  		<artifactId>libai</artifactId>
+  		<version>1.6.12</version>
+  	</dependency>
   </dependencies>
 </project>

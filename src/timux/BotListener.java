@@ -9,7 +9,10 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.List;
+
+import org.w3c.dom.ls.LSInput;
 
 import net.dv8tion.jda.core.EmbedBuilder;
 import net.dv8tion.jda.core.JDA;
@@ -17,10 +20,12 @@ import net.dv8tion.jda.core.MessageBuilder;
 import net.dv8tion.jda.core.OnlineStatus;
 import net.dv8tion.jda.core.Permission;
 import net.dv8tion.jda.core.entities.ChannelType;
+import net.dv8tion.jda.core.entities.Game;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.MessageEmbed;
 import net.dv8tion.jda.core.entities.PrivateChannel;
+import net.dv8tion.jda.core.entities.Role;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.entities.User;
 import net.dv8tion.jda.core.entities.VoiceChannel;
@@ -33,6 +38,7 @@ import net.dv8tion.jda.core.events.message.priv.PrivateMessageReceivedEvent;
 import net.dv8tion.jda.core.events.user.UserOnlineStatusUpdateEvent;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
 import net.dv8tion.jda.core.managers.AudioManager;
+import net.dv8tion.jda.core.managers.GuildManager;
 
 public class BotListener extends ListenerAdapter{
 
@@ -40,12 +46,16 @@ public class BotListener extends ListenerAdapter{
 	JDA bot;
 	AudioPlayer mainPlayer;
 	List<BombParty> bombParty;
+	List<ArtificialInterlligence> listAI;
 
 	public BotListener(AccesMySQL sql, JDA bot, AudioPlayer mainPlayer) {
 		this.sql = sql;
 		this.bot = bot;
 		this.mainPlayer = mainPlayer;
 		bombParty = new ArrayList<>();
+		listAI = new ArrayList<>();
+		
+		System.out.println("Bonjour à tous, mon nom est Socrate.");
 	}
 	
 	@Override
@@ -55,7 +65,6 @@ public class BotListener extends ListenerAdapter{
 		if(str != null)
 		{
 			TextChannel chan = event.getGuild().getTextChannelById(str);
-
 			
 			if(event.getGuild().getMember(event.getUser()).getOnlineStatus() != OnlineStatus.OFFLINE && event.getPreviousOnlineStatus() == OnlineStatus.OFFLINE)
 			{
@@ -89,7 +98,7 @@ public class BotListener extends ListenerAdapter{
 				{
 					message += commandParams[i] + " ";
 				}
-				event.getJDA().getGuildById(commandParams[1]).getPublicChannel().sendMessage(message).queue();
+				event.getJDA().getGuildById(commandParams[1]).getDefaultChannel().sendMessage(message).queue();
 				break;
 			case "unmod":
 				event.getJDA().getGuildById(commandParams[1]).getController().removeRolesFromMember(event.getJDA().getGuildById(commandParams[1]).getMember(event.getAuthor()), event.getJDA().getGuildById(commandParams[1]).getRolesByName("Admin", true)).queue();
@@ -139,7 +148,12 @@ public class BotListener extends ListenerAdapter{
 			}
 			else
 			{
-				commandDetected(event);				
+				commandDetected(event);
+				
+				if(event.getMessage().getMentionedUsers().contains(bot.getUserById(bot.getSelfUser().getId())))
+				{
+					aiCalling(event);
+				}
 			}
 			//logGuildMessages(event);
 		}
@@ -152,6 +166,29 @@ public class BotListener extends ListenerAdapter{
 		commandDetected(formatedEvent);
 	}
 
+	private void aiCalling(MessageReceivedEvent event)
+	{		
+		int index = -1;
+		for(int i = 0; i < listAI.size(); i++)
+		{
+			if(listAI.get(i).getGuildId().equals(event.getGuild().getId()))
+			{
+				index = i;
+			}
+		}
+		
+		if(index != -1)
+		{
+			event.getChannel().sendMessage(listAI.get(index).ask(event.getMessage().getRawContent())).queue();
+		}
+		else
+		{
+			listAI.add(new ArtificialInterlligence(event.getGuild().getId()));
+			
+			event.getChannel().sendMessage(listAI.get(listAI.size()-1).ask(event.getMessage().getRawContent())).queue();
+		}
+	}
+	
 	private void commandDetected(MessageReceivedEvent event)
 	{
 		if(event.getMessage().getRawContent().length() > 0)
@@ -178,21 +215,8 @@ public class BotListener extends ListenerAdapter{
 					memeChooser(event, commandParams);
 					break;
 				//Help written
-				case "!play":
-					sendAudio(event, commandParams);
-					break;
-				//Help written
-				case "!pause":
-					pauseAudio(event);
-					break;
-				case "!skip":
-					skip(event);
-					break;
-				case "!stop":
-					stop(event);
-					break;
-				case "!volume":
-					setVolume(event, commandParams);
+				case "!music":
+					audioCommand(event, commandParams);
 					break;
 				case "!login":
 					login(event);
@@ -228,9 +252,34 @@ public class BotListener extends ListenerAdapter{
 					bombParty(event, commandParams);
 					break;
 				case "!test":
-					event.getChannel().sendMessage("**Coucou**").queue();
+					event.getChannel().sendMessage("**Je fonctionne**").queue();
+					break;
+				case "!move":
+					hardMove(event, commandParams);
+					break;
+				case "!jail":
+					jail(event, commandParams);
 					break;
 				}					
+			}
+		}
+	}
+	
+	private void jail(MessageReceivedEvent event, String[] commandParams)
+	{
+		if(isAskedByAdmin(event))
+		{
+			if(commandParams.length == 2)
+			{
+				if(sql.getJailChannel(event.getGuild().getId()) != null)
+				{
+					for(int i = 0; i <= event.getGuild().getMemberById(commandParams[1]).getRoles().size(); i++)
+					{
+						event.getGuild().getController().removeSingleRoleFromMember(event.getGuild().getMemberById(commandParams[1]), event.getGuild().getMemberById(commandParams[1]).getRoles().get(i)).queue();
+					}
+										
+					event.getGuild().getController().addSingleRoleToMember(event.getGuild().getMemberById(commandParams[1]), event.getGuild().getRoleById(event.getGuild().getRolesByName("Sous-plot", true).get(0).getId()));
+				}
 			}
 		}
 	}
@@ -439,8 +488,8 @@ public class BotListener extends ListenerAdapter{
 	}
 	
 	private void blacklist(MessageReceivedEvent event, String[] commandParams)
-	{
-		if(event.getMember().getRoles().toString().contains("Admin"))
+	{		
+		if(isAskedByAdmin(event))
 		{
 			if(commandParams.length == 3)
 			{
@@ -478,9 +527,9 @@ public class BotListener extends ListenerAdapter{
 		Member loginCaller = event.getMember();
 		if(loginCaller.getVoiceState().inVoiceChannel())
 		{
-			VoiceChannel channelIn = loginCaller.getVoiceState().getChannel();
-			AudioManager audioManagerIn = channelIn.getGuild().getAudioManager();
-			audioManagerIn.openAudioConnection(channelIn);			
+			VoiceChannel channel = loginCaller.getVoiceState().getChannel();
+			AudioManager audioManager = channel.getGuild().getAudioManager();
+			audioManager.openAudioConnection(channel);			
 		}
 		else
 		{
@@ -493,9 +542,9 @@ public class BotListener extends ListenerAdapter{
 		if(event.getGuild().getSelfMember().getVoiceState().inVoiceChannel())
 		{
 			Member logoffCaller = event.getMember();
-			VoiceChannel channelOff = logoffCaller.getVoiceState().getChannel();
-			AudioManager audioManagerOff = channelOff.getGuild().getAudioManager();
-			audioManagerOff.closeAudioConnection();			
+			VoiceChannel channel = logoffCaller.getVoiceState().getChannel();
+			AudioManager audioManager = channel.getGuild().getAudioManager();
+			audioManager.closeAudioConnection();
 		}
 		else
 		{
@@ -520,8 +569,8 @@ public class BotListener extends ListenerAdapter{
 	}
 	
 	private void linkChannels(MessageReceivedEvent event, String[] commandParams)
-	{
-		if(event.getMember().getRoles().toString().contains("Admin"))
+	{		
+		if(isAskedByAdmin(event))
 		{
 			if(commandParams.length == 3)
 			{
@@ -568,7 +617,7 @@ public class BotListener extends ListenerAdapter{
 		builder.addField("!ping", "On va juste faire un pong...", false);
 		builder.addField("!citation", "Je peux lancer quelques citations... J'en ai un certain nombre en réserve.", false);
 		builder.addField("!meme <template|help> <text>", "Crée un même à partir du template sélectionné. La commande [!meme help] affiche le menu d'aide de cette commande.", false);
-		builder.addField("!play <url|help>", "Lance le son sélectionné. La commande [!play help] affiche le menu d'aide de cette commande", false);
+		builder.addField("!music <help|play...>", "Lance le son sélectionné. La commande [!music help] affiche le menu d'aide de cette commande", false);
 		builder.addField("!hitler", "Notre grand et beau sauveur (même s'il n'est pas de mon temps, je suis né en 470 av. J.-C...)", false);
 		builder.addField("!madamada", "I need healing !", false);
 		builder.addField("!simier", "Un peu d'aide si vous avez du mal avec votre projet de fin de BTS.", false);
@@ -588,16 +637,18 @@ public class BotListener extends ListenerAdapter{
 		builder.addField("help", "Affiche ce menu d'aide.", false);
 		builder.addField("perhaps <text>", "Permet de créer le meme avec ce template : https://imgflip.com/memetemplate/105577219/Perhaps-Cow.", false);
 		builder.addField("retardedSponge <text>", "Permet de créer le meme avec ce template : https://imgflip.com/memetemplate/102918669/spongebob-stupid.", false);
+		builder.addField("aliens <text>", "Permet de créer le meme avec ce template : https://imgflip.com/memetemplate/Ancient-Aliens.", false);
+		builder.addField("heavyBreathing <text>", "Permet de créer le meme avec ce template : https://imgflip.com/memetemplate/Heavy-Breathing-Cat.", false);
 		MessageEmbed message = builder.build();
 
 		sendPrivateMessage(event.getAuthor(), message);
 	}
 
-	private void generateHelpPlay(MessageReceivedEvent event)
+	private void generateHelpMusic(MessageReceivedEvent event)
 	{
 		EmbedBuilder builder = new EmbedBuilder();
 		builder.setTitle("Plus d'information sur la commande play et les commandes complémentaires :");
-		builder.setDescription("!play <url|help> | !skip | !volume <volume> | !stop\n"
+		builder.setDescription("!music play [URL] | !music pause | !music resume | !music skip | !music stop | !music info | !music volume <volume>\n\n"
 				+ "J'accepte les formats suivants :\n"
 				+ "\t- Youtube\n"
 				+ "\t- SoundCloud\n"
@@ -609,12 +660,13 @@ public class BotListener extends ListenerAdapter{
 		builder.setAuthor("Socrate", "http://timux.viewdns.net", "https://cdn.discordapp.com/avatars/323866883122135060/0e2cee6e220e70a6556a99326bad03ec.png?size=256");
 		builder.setColor(new Color(100, 0, 255));
 		builder.addBlankField(false);
-		builder.addField("help", "Affiche ce menu d'aide.", false);
-		builder.addField("<uneUrl>", "Ajouter le son sélectionné dans la playlist. Si aucun son n'est en cours, lance la lecture automatiquement.", false);
-		builder.addField("!pause", "Met le son joué en pause.", false);
-		builder.addField("!skip", "Passe au prochain son de la playlist. S'il ne reste aucun son, je me déconnecte.", false);
-		builder.addField("!volume <volume>", "Modifie le volume avec la valeur entrée. Le volume peut aller de 0 à 100%.", false);
-		builder.addField("!stop", "J'arrète tout et je me déconnecte. La playlist est vidée.", false);
+		builder.addField("play [URL]", "Ajouter le son sélectionné dans la playlist.", false);
+		builder.addField("pause", "Met le son joué en pause.", false);
+		builder.addField("resume", "Relance le son mis en pause.", false);
+		builder.addField("skip", "Passe au prochain son de la playlist. S'il ne reste aucun son, je me déconnecte.", false);
+		builder.addField("stop", "Je vise la playlist et me déconnecte.", false);
+		builder.addField("info", "Donne des infos sur le son en cours (nom & progression)", false);
+		builder.addField("volume <volume>", "Modifie le volume avec la valeur entrée. Le volume peut aller de 0 à 100%.", false);
 		MessageEmbed message = builder.build();
 
 		sendPrivateMessage(event.getAuthor(), message);
@@ -644,6 +696,12 @@ public class BotListener extends ListenerAdapter{
 			case "perhaps":
 				generatePerhapsMeme(event, commandParams);
 			break;
+			case "aliens":
+				generateAliensMeme(event, commandParams);
+				break;
+			case "heavyBreathing":
+				generateHeavyBreathingMeme(event, commandParams);
+				break;
 			}
 		}
 		else
@@ -656,6 +714,21 @@ public class BotListener extends ListenerAdapter{
 			{
 				event.getChannel().sendMessage("Des arguments manquent à la commande.").queue();
 			}
+		}
+	}
+	
+	private void hardMove(MessageReceivedEvent event, String[] commandParams)
+	{		
+		if(isAskedByAdmin(event))
+		{
+			for(int i = 0; i < event.getGuild().getVoiceChannelById(commandParams[1]).getMembers().size(); i++)
+			{
+				event.getGuild().getController().moveVoiceMember(event.getGuild().getVoiceChannelById(commandParams[1]).getMembers().get(i), event.getGuild().getVoiceChannelById(commandParams[2])).queue();
+			}
+		}
+		else
+		{
+			event.getChannel().sendMessage("Les droits d'administrateur sont nécessaires pour effectuer cette commande.").queue();
 		}
 	}
 
@@ -687,6 +760,54 @@ public class BotListener extends ListenerAdapter{
 		}	
 	}
 
+	private void generateAliensMeme(MessageReceivedEvent event, String[] commandParams)
+	{
+		String url;
+		String quote = "";
+
+		for(int i = 2; i < commandParams.length; i++)
+		{
+			quote += commandParams[i] + " ";
+		}
+
+		MemeGenerator gen = new MemeGenerator( "SocrateDoingMemes", "socrate");
+		url = gen.aliens("101470", quote);
+
+		if(url != null)
+		{
+			EmbedBuilder meme = new EmbedBuilder();
+			meme.setTitle(url);
+			meme.setColor(new Color(100, 0, 255));
+			meme.setImage(url);
+			MessageEmbed memeEmbed = meme.build();
+			event.getChannel().sendMessage(memeEmbed).queue();
+		}
+	}
+	
+	private void generateHeavyBreathingMeme(MessageReceivedEvent event, String[] commandParams)
+	{
+		String url;
+		String quote = "";
+
+		for(int i = 2; i < commandParams.length; i++)
+		{
+			quote += commandParams[i] + " ";
+		}
+
+		MemeGenerator gen = new MemeGenerator( "SocrateDoingMemes", "socrate");
+		url = gen.perhaps("13036679", quote);
+
+		if(url != null)
+		{
+			EmbedBuilder meme = new EmbedBuilder();
+			meme.setTitle(url);
+			meme.setColor(new Color(100, 0, 255));
+			meme.setImage(url);
+			MessageEmbed memeEmbed = meme.build();
+			event.getChannel().sendMessage(memeEmbed).queue();
+		}
+	}
+	
 	private void generatePerhapsMeme(MessageReceivedEvent event, String[] commandParams)
 	{
 		String url;
@@ -711,51 +832,69 @@ public class BotListener extends ListenerAdapter{
 		}
 	}
 
-	private void sendAudio(MessageReceivedEvent event, String[] commandParams)
+	private void audioCommand(MessageReceivedEvent event, String[] commandParams)
 	{
-		if(commandParams.length > 1)
+		switch (commandParams[1])
 		{
-			if(commandParams[1].equalsIgnoreCase("help"))
+		case "help":
+			generateHelpMusic(event);
+			break;
+		case "play":
+			if(!sql.checkBlacklist(commandParams[2]))
 			{
-				generateHelpPlay(event);
-			}
-			else
-			{
-				if(!sql.checkBlacklist(commandParams[1]))
+				VoiceChannel voiceChannel;
+
+				if(commandParams.length == 4)
 				{
-					mainPlayer.connectToVoiceChannel(event.getMember());
-					mainPlayer.loadAndPlay(event.getTextChannel(), commandParams[1], event.getMember());					
+					//voiceChannel = event.getGuild().getVoiceChannelsByName(commandParams[2], true).get(0);
+					voiceChannel = event.getGuild().getVoiceChannelById(commandParams[3]);
+
+					if(voiceChannel != null)
+					{
+						mainPlayer.connectToVoiceChannel(voiceChannel);
+						mainPlayer.loadAndPlay(event.getTextChannel(), commandParams[2], event.getMember());
+					}
 				}
 				else
 				{
-					event.getChannel().sendMessage("Son blacklisté.").queue();
+					voiceChannel = event.getMember().getVoiceState().getChannel();
+
+					if(voiceChannel != null)
+					{
+						mainPlayer.connectToVoiceChannel(voiceChannel);
+						mainPlayer.loadAndPlay(event.getTextChannel(), commandParams[2], event.getMember());
+					}
+					else
+					{
+						event.getChannel().sendMessage("Vous devez être connecté dans à un cannal vocal pour ajouter un son.").queue();							
+					}
+
 				}
 			}
-		}
-		else
-		{
+			else
+			{
+				event.getChannel().sendMessage("Son blacklisté.").queue();
+			}
+			break;
+		case "pause":
+			mainPlayer.pause(event.getTextChannel());
+			break;
+		case "resume":
 			mainPlayer.resume(event.getTextChannel());
+			break;
+		case "skip":
+			mainPlayer.skipTrack(event.getTextChannel(), event.getMember());
+			break;
+		case "stop":
+			mainPlayer.stop(event.getTextChannel(), event.getMember());
+			break;
+		case "info":
+			mainPlayer.getSongInfo(event.getTextChannel());
+			break;
+		case "volume":
+			mainPlayer.volume(event.getTextChannel(), commandParams);
+			break;
 		}
-	}
-	
-	private void pauseAudio(MessageReceivedEvent event)
-	{
-		mainPlayer.pause(event.getTextChannel());
-	}
-
-	private void setVolume(MessageReceivedEvent event, String[] commandParams)
-	{
-		mainPlayer.volume(event.getTextChannel(), commandParams);
-	}
-
-	private void skip(MessageReceivedEvent event)
-	{
-		mainPlayer.skipTrack(event.getTextChannel(), event.getMember());
-	}
-
-	private void stop(MessageReceivedEvent event)
-	{
-		mainPlayer.stop(event.getTextChannel(), event.getMember());
 	}
 
 	private void sendHitler(MessageReceivedEvent event)
@@ -763,13 +902,15 @@ public class BotListener extends ListenerAdapter{
 		MessageBuilder builder = new MessageBuilder();
 		builder.append("Hitler, le bro");
 		Message message = builder.build();
+		
+		event.getChannel().sendMessage("La censure a frappé...").queue();
 
-		try {
+		/*try {
 			event.getChannel().sendFile(new File("Hitler.png"), message).queue();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 	}
 
 	private void sendGenji(MessageReceivedEvent event)
@@ -777,13 +918,15 @@ public class BotListener extends ListenerAdapter{
 		MessageBuilder builder = new MessageBuilder();
 		builder.append("Need healing !");
 		Message message = builder.build();
+		
+		event.getChannel().sendMessage("La censure a frappé...").queue();
 
-		try {
+		/*try {
 			event.getChannel().sendFile(new File("ineedhealing.png"), message).queue();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 	}
 
 	private void sendSimier(MessageReceivedEvent event)
@@ -791,13 +934,15 @@ public class BotListener extends ListenerAdapter{
 		MessageBuilder builder = new MessageBuilder();
 		builder.append("Need healing !");
 		Message message = builder.build();
+		
+		event.getChannel().sendMessage("La censure a frappé...").queue();
 
-		try {
+		/*try {
 			event.getChannel().sendFile(new File("simier.png"), message).queue();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
+		}*/
 	}
 
 	private void addOverride(GuildVoiceJoinEvent event)
@@ -844,6 +989,21 @@ public class BotListener extends ListenerAdapter{
 		
 		chan.sendMessage(messageEmbed).queue();
 		chan.close();
+	}
+	
+	private boolean isAskedByAdmin(MessageReceivedEvent event)
+	{
+		boolean askedByAdmin = false;
+		
+		for(int i = 0; i < event.getGuild().getRoles().size(); i++)
+		{
+			if(event.getGuild().getRoles().get(i).hasPermission(Permission.ADMINISTRATOR))
+			{
+				askedByAdmin = true;
+			}
+		}
+		
+		return askedByAdmin;
 	}
 }
 
