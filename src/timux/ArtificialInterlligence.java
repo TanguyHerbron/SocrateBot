@@ -14,7 +14,7 @@ public class ArtificialInterlligence {
 	public ArtificialInterlligence(String guildId)
 	{
 		this.guildId = guildId;
-		configuration = new AIConfiguration("07dbedc360324feab7b8942c21a81aa0");
+		configuration = new AIConfiguration("");
 		
 		dataService = new AIDataService(configuration);
 	}
