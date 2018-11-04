@@ -1,3 +1,4 @@
 
 *.class
 *.properties
+target/classes/config.properties
